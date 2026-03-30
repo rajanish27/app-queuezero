@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "queuezero",
+    "slug": "queuezero",
+    "version": "1.0.0",
+    "scheme": "queuezero",
+    "plugins": [
+      "expo-secure-store",
+      "expo-web-browser"
+    ]
+  }
+}
