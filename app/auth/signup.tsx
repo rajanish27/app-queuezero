@@ -176,7 +176,7 @@ export default function SignupScreen() {
                   <Text style={styles.appName}>
                     Queue<Text style={styles.appAccent}>Zero</Text>
                   </Text>
-                  <Text style={styles.appTagline}>queuezero</Text>
+                  <Text style={styles.appTagline}>queuezerogit </Text>
                 </Animated.View>
         
                 {/* Hippo animation — shrinks on keyboard */}
