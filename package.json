@@ -3,6 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scheme": "queuezero",
+  "android": {
+      "softwareKeyboardLayoutMode": "pan"
+    },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",

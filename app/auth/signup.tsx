@@ -1,14 +1,19 @@
-import { useState } from 'react'
-import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator, Alert
-} from 'react-native'
 import { router } from 'expo-router'
+import LottieView from 'lottie-react-native'
+import { useEffect, useRef, useState } from 'react'
+import {
+  ActivityIndicator, Alert,
+  Animated, Keyboard,
+  KeyboardAvoidingView, Platform,
+  ScrollView,
+  StyleSheet,
+  Text, TextInput, TouchableOpacity,
+  View
+} from 'react-native'
 import { supabase } from '../../lib/supabase'
 
 export default function SignupScreen() {
-  const [fullName, setFullName] = useState('')
+  const [FullName, setFullName] = useState('')
   const [phone, setPhone]       = useState('')
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -17,9 +22,75 @@ export default function SignupScreen() {
   const [loading, setLoading]   = useState(false)
 
   const [focusedField, setFocusedField] = useState('')
-
+   const lottieRef  = useRef<LottieView>(null)
+    const owlSize    = useRef(new Animated.Value(180)).current
+    const owlOpacity = useRef(new Animated.Value(1)).current
+    const cardAnim   = useRef(new Animated.Value(0)).current
+    const floatAnim  = useRef(new Animated.Value(0)).current
+ // ── Card slide-in on mount ──────────────────────────────────────
+   useEffect(() => {
+     Animated.timing(cardAnim, {
+       toValue: 1,
+       duration: 700,
+       useNativeDriver: true,
+     }).start()
+   }, [])
+ 
+   // ── Gentle float up/down ────────────────────────────────────────
+   useEffect(() => {
+     Animated.loop(
+       Animated.sequence([
+         Animated.timing(floatAnim, {
+           toValue: -8,
+           duration: 2000,
+           useNativeDriver: false,
+         }),
+         Animated.timing(floatAnim, {
+           toValue: 0,
+           duration: 2000,
+           useNativeDriver: false,
+         }),
+       ])
+     ).start()
+   }, [])
+    // ── Keyboard listener — shrink hippo when keyboard opens ────────
+     useEffect(() => {
+       const show = Keyboard.addListener('keyboardDidShow', () => {
+         setKeyboardOpen(true)
+         Animated.parallel([
+           Animated.timing(owlSize, {
+             toValue: 90,
+             duration: 300,
+             useNativeDriver: false,
+           }),
+           Animated.timing(owlOpacity, {
+             toValue: 0.7,
+             duration: 300,
+             useNativeDriver: false,
+           }),
+         ]).start()
+       })
+   
+       const hide = Keyboard.addListener('keyboardDidHide', () => {
+         setKeyboardOpen(false)
+         Animated.parallel([
+           Animated.timing(owlSize, {
+             toValue: 180,
+             duration: 300,
+             useNativeDriver: false,
+           }),
+           Animated.timing(owlOpacity, {
+             toValue: 1,
+             duration: 300,
+             useNativeDriver: false,
+           }),
+         ]).start()
+       })
+   
+       return () => { show.remove(); hide.remove() }
+     }, [])
   const validate = () => {
-    if (!fullName.trim()) {
+    if (!FullName.trim()) {
       Alert.alert('Missing Name', 'Please enter your full name')
       return false
     }
@@ -52,7 +123,7 @@ export default function SignupScreen() {
         password,
         options: {
           data: {
-            full_name: fullName.trim(),
+            full_name: FullName.trim(),
             phone: phone.trim(),
           }
         }
@@ -83,6 +154,10 @@ export default function SignupScreen() {
     focusedField === field && styles.inputFocused
   ])
 
+  function getHint(): string {
+    throw new Error('Function not implemented.')
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -93,6 +168,60 @@ export default function SignupScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Top space */}
+                <View style={{ height: 50 }} />
+        
+                {/* App name */}
+                <Animated.View style={{ opacity: cardAnim, alignItems: 'center' }}>
+                  <Text style={styles.appName}>
+                    Queue<Text style={styles.appAccent}>Zero</Text>
+                  </Text>
+                  <Text style={styles.appTagline}>queuezero</Text>
+                </Animated.View>
+        
+                {/* Hippo animation — shrinks on keyboard */}
+                <Animated.View style={[
+                  styles.hippoContainer,
+                  {
+                    width:   owlSize,
+                    height:  owlSize,
+                    opacity: owlOpacity,
+                    transform: [{ translateY: floatAnim }]
+                  }
+                ]}>
+                  <LottieView
+                    ref={lottieRef}
+                    source={require('../../assets/animations/hippo.json')}
+                    autoPlay={false}
+                    loop={true}
+                    style={{ width: '100%', height: '100%' }}
+                    onLayout={() => {
+                      // Start with idle on load
+                      lottieRef.current?.play(40, 79)
+                    }}
+                  />
+                </Animated.View>
+        
+                {/* Hint text — hidden when keyboard open */}
+                {!setKeyboardOpen && (
+                  <Animated.Text style={[styles.hint, { opacity: cardAnim }]}>
+                    {getHint()}
+                  </Animated.Text>
+                )}
+        
+                {/* Card — slides up on mount */}
+                <Animated.View style={[
+                  styles.card,
+                  {
+                    opacity: cardAnim,
+                    transform: [{
+                      translateY: cardAnim.interpolate({
+                        inputRange:  [0, 1],
+                        outputRange: [50, 0],
+                      })
+                    }]
+                  }
+                ]}></Animated.View>
         <View style={styles.topSpace} />
 
         {/* Card */}
@@ -111,7 +240,7 @@ export default function SignupScreen() {
               style={styles.input}
               placeholder="John Doe"
               placeholderTextColor="#B0BEC5"
-              value={fullName}
+              value={FullName}
               onChangeText={setFullName}
               onFocus={() => setFocusedField('name')}
               onBlur={() => setFocusedField('')}
@@ -254,6 +383,33 @@ const styles = StyleSheet.create({
   },
   topSpace:    { height: 60 },
   bottomSpace: { height: 40 },
+  // App name
+  appName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+  },
+  appAccent: {
+    color: '#1E4DB7',
+  },
+  appTagline: {
+    fontSize: 12,
+    color: '#78909C',
+    marginTop: 2,
+    marginBottom: 4,
+  },
+   // Hippo
+  hippoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 4,
+  },
+  hint: {
+    fontSize: 13,
+    color: '#78909C',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
 
   card: {
     width: '100%',
@@ -338,6 +494,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  
+
   signUpBtn: {
     backgroundColor: '#1E4DB7',
     borderRadius: 14,
@@ -381,3 +539,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
 })
+
+function setKeyboardOpen(arg0: boolean) {
+  throw new Error('Function not implemented.')
+}

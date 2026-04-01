@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, ActivityIndicator, Alert, Image
+  StyleSheet, Platform, ScrollView,
+  ActivityIndicator, Alert, KeyboardAvoidingView,
+  Animated, Keyboard
 } from 'react-native'
+import LottieView from 'lottie-react-native'
 import { router } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 
@@ -12,12 +14,99 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('')
   const [loading, setLoading]   = useState(false)
   const [showPass, setShowPass] = useState(false)
-  const [emailFocused, setEmailFocused] = useState(false)
-  const [passFocused, setPassFocused]   = useState(false)
+  const [focusedField, setFocusedField] = useState('idle')
+  const [keyboardOpen, setKeyboardOpen] = useState(false)
 
+  const lottieRef  = useRef<LottieView>(null)
+  const owlSize    = useRef(new Animated.Value(180)).current
+  const owlOpacity = useRef(new Animated.Value(1)).current
+  const cardAnim   = useRef(new Animated.Value(0)).current
+  const floatAnim  = useRef(new Animated.Value(0)).current
+
+  // ── Card slide-in on mount ──────────────────────────────────────
+  useEffect(() => {
+    Animated.timing(cardAnim, {
+      toValue: 1,
+      duration: 700,
+      useNativeDriver: true,
+    }).start()
+  }, [])
+
+  // ── Gentle float up/down ────────────────────────────────────────
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -8,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: false,
+        }),
+      ])
+    ).start()
+  }, [])
+
+  // ── Keyboard listener — shrink hippo when keyboard opens ────────
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardOpen(true)
+      Animated.parallel([
+        Animated.timing(owlSize, {
+          toValue: 90,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(owlOpacity, {
+          toValue: 0.7,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+      ]).start()
+    })
+
+    const hide = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardOpen(false)
+      Animated.parallel([
+        Animated.timing(owlSize, {
+          toValue: 180,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(owlOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: false,
+        }),
+      ]).start()
+    })
+
+    return () => { show.remove(); hide.remove() }
+  }, [])
+
+  // ── Play correct animation segment based on focused field ───────
+  const PRIVATE_FIELDS = ['password', 'confirm', 'phone']
+  useEffect(() => {
+  if (!lottieRef.current) return
+
+  if (PRIVATE_FIELDS.includes(focusedField)) {
+    // Looks away for password, confirm password and phone
+    lottieRef.current.play(80, 119)
+
+  } else if (focusedField === 'idle') {
+    // Idle bounce
+    lottieRef.current.play(40, 79)
+
+  } else {
+    // Waves hello for name and email
+    lottieRef.current.play(0, 39)
+  }
+}, [focusedField])
+  // ── Login handler ───────────────────────────────────────────────
   const handleLogin = async () => {
-    // Validation 
-    //.trim removes whitespace 
     if (!email.trim()) {
       Alert.alert('Missing Email', 'Please enter your email address')
       return
@@ -26,19 +115,14 @@ export default function LoginScreen() {
       Alert.alert('Missing Password', 'Please enter your password')
       return
     }
-
     setLoading(true)
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       })
-
       if (error) throw error
-
-      // Success — navigate to main app
       router.replace('/(tabs)')
-
     } catch (error: any) {
       Alert.alert(
         'Login Failed',
@@ -51,15 +135,11 @@ export default function LoginScreen() {
     }
   }
 
-  const handleGoogleLogin = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-      })
-      if (error) throw error
-    } catch (error: any) {
-      Alert.alert('Google Sign In Failed', error.message)
-    }
+  // ── Hint text based on state ────────────────────────────────────
+  const getHint = () => {
+    if (focusedField === 'password') return "🙈 I won't look!"
+    if (focusedField === 'email')    return '👋 Hello there!'
+    return '🦛 Ready to book!'
   }
 
   return (
@@ -71,24 +151,72 @@ export default function LoginScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        bounces={false}
       >
-        {/* Top spacing */}
-        <View style={styles.topSpace} />
+        {/* Top space */}
+        <View style={{ height: 50 }} />
 
-        {/* Card */}
-        <View style={styles.card}>
+        {/* App name */}
+        <Animated.View style={{ opacity: cardAnim, alignItems: 'center' }}>
+          <Text style={styles.appName}>
+            Queue<Text style={styles.appAccent}>Zero</Text>
+          </Text>
+          <Text style={styles.appTagline}>🏥 Smart Hospital Booking</Text>
+        </Animated.View>
 
-          {/* Header */}
-          <Text style={styles.title}>Queuezero</Text>
-          <Text style={styles.subtitle}>Welcome back</Text>
+        {/* Hippo animation — shrinks on keyboard */}
+        <Animated.View style={[
+          styles.hippoContainer,
+          {
+            width:   owlSize,
+            height:  owlSize,
+            opacity: owlOpacity,
+            transform: [{ translateY: floatAnim }]
+          }
+        ]}>
+          <LottieView
+            ref={lottieRef}
+            source={require('../../assets/animations/hippo.json')}
+            autoPlay={false}
+            loop={true}
+            style={{ width: '100%', height: '100%' }}
+            onLayout={() => {
+              // Start with idle on load
+              lottieRef.current?.play(40, 79)
+            }}
+          />
+        </Animated.View>
+
+        {/* Hint text — hidden when keyboard open */}
+        {!keyboardOpen && (
+          <Animated.Text style={[styles.hint, { opacity: cardAnim }]}>
+            {getHint()}
+          </Animated.Text>
+        )}
+
+        {/* Card — slides up on mount */}
+        <Animated.View style={[
+          styles.card,
+          {
+            opacity: cardAnim,
+            transform: [{
+              translateY: cardAnim.interpolate({
+                inputRange:  [0, 1],
+                outputRange: [50, 0],
+              })
+            }]
+          }
+        ]}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Login to your account</Text>
 
           <View style={styles.divider} />
 
-          {/* Email */}
+          {/* Email field */}
           <Text style={styles.label}>EMAIL ADDRESS</Text>
           <View style={[
             styles.inputWrapper,
-            emailFocused && styles.inputFocused
+            focusedField === 'email' && styles.inputFocused
           ]}>
             <TextInput
               style={styles.input}
@@ -96,15 +224,15 @@ export default function LoginScreen() {
               placeholderTextColor="#B0BEC5"
               value={email}
               onChangeText={setEmail}
-              onFocus={() => setEmailFocused(true)}
-              onBlur={() => setEmailFocused(false)}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField('idle')}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
             />
           </View>
 
-          {/* Password */}
+          {/* Password field */}
           <View style={styles.passwordHeader}>
             <Text style={styles.label}>PASSWORD</Text>
             <TouchableOpacity>
@@ -113,7 +241,7 @@ export default function LoginScreen() {
           </View>
           <View style={[
             styles.inputWrapper,
-            passFocused && styles.inputFocused
+            focusedField === 'password' && styles.inputFocused
           ]}>
             <TextInput
               style={[styles.input, { flex: 1 }]}
@@ -121,8 +249,8 @@ export default function LoginScreen() {
               placeholderTextColor="#B0BEC5"
               value={password}
               onChangeText={setPassword}
-              onFocus={() => setPassFocused(true)}
-              onBlur={() => setPassFocused(false)}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => setFocusedField('idle')}
               secureTextEntry={!showPass}
             />
             <TouchableOpacity
@@ -135,7 +263,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Sign In Button */}
+          {/* Sign In button */}
           <TouchableOpacity
             style={[styles.signInBtn, loading && styles.btnDisabled]}
             onPress={handleLogin}
@@ -148,20 +276,16 @@ export default function LoginScreen() {
             }
           </TouchableOpacity>
 
-          {/* Divider */}
+          {/* Quick connect divider */}
           <View style={styles.orRow}>
             <View style={styles.orLine} />
             <Text style={styles.orText}>QUICK CONNECT</Text>
             <View style={styles.orLine} />
           </View>
 
-          {/* Google Button */}
-          <TouchableOpacity
-            style={styles.googleBtn}
-            onPress={handleGoogleLogin}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.googleIcon}>G</Text>
+          {/* Google button */}
+          <TouchableOpacity style={styles.googleBtn} activeOpacity={0.85}>
+            <Text style={styles.googleG}>G</Text>
             <Text style={styles.googleText}>Continue with Google</Text>
           </TouchableOpacity>
 
@@ -172,16 +296,15 @@ export default function LoginScreen() {
               <Text style={styles.bottomLink}>Create account</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
-        {/* HIPAA Badge */}
+        {/* HIPAA badge */}
         <View style={styles.hipaaRow}>
           <Text style={styles.hipaaIcon}>🛡️</Text>
           <Text style={styles.hipaaText}>SECURE HIPAA COMPLIANT PLATFORM</Text>
         </View>
 
-        {/* Bottom spacing */}
-        <View style={styles.bottomSpace} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
   )
@@ -197,8 +320,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
   },
-  topSpace: { height: 80 },
-  bottomSpace: { height: 40 },
+
+  // App name
+  appName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+  },
+  appAccent: {
+    color: '#1E4DB7',
+  },
+  appTagline: {
+    fontSize: 12,
+    color: '#78909C',
+    marginTop: 2,
+    marginBottom: 4,
+  },
+
+  // Hippo
+  hippoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 4,
+  },
+  hint: {
+    fontSize: 13,
+    color: '#78909C',
+    fontStyle: 'italic',
+    marginBottom: 8,
+  },
 
   // Card
   card: {
@@ -214,16 +364,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#1A1A1A',
   },
-
-  // Header
   title: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#1A1A1A',
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#78909C',
     textAlign: 'center',
     marginTop: 4,
@@ -231,7 +379,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: '#F0F0F0',
-    marginVertical: 24,
+    marginVertical: 20,
   },
 
   // Labels
@@ -253,7 +401,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     height: 52,
     backgroundColor: '#FAFAFA',
-    marginBottom: 20,
+    marginBottom: 18,
   },
   inputFocused: {
     borderColor: '#1E4DB7',
@@ -264,34 +412,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1A1A1A',
   },
-  eyeBtn: {
-    paddingLeft: 10,
-  },
-  eyeIcon: {
-    fontSize: 16,
-  },
+  eyeBtn:  { paddingLeft: 10 },
+  eyeIcon: { fontSize: 16 },
 
   // Password row
   passwordHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
   forgot: {
     fontSize: 13,
     color: '#1E4DB7',
     fontWeight: '600',
+    marginBottom: 8,
   },
 
-  // Sign in button
+  // Button
   signInBtn: {
     backgroundColor: '#1E4DB7',
     borderRadius: 14,
     height: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
     shadowColor: '#1E4DB7',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -306,7 +449,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // OR divider
+  // OR row
   orRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -325,7 +468,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
 
-  // Google button
+  // Google
   googleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,7 +480,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     gap: 10,
   },
-  googleIcon: {
+  googleG: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#4285F4',
@@ -354,10 +497,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 20,
   },
-  bottomText: {
-    fontSize: 14,
-    color: '#78909C',
-  },
+  bottomText: { fontSize: 14, color: '#78909C' },
   bottomLink: {
     fontSize: 14,
     color: '#1E4DB7',

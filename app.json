@@ -7,6 +7,9 @@
     "plugins": [
       "expo-secure-store",
       "expo-web-browser"
-    ]
+    ],
+    "android": {
+      "softwareKeyboardLayoutMode": "pan"
+    }
   }
 }
