@@ -9,7 +9,8 @@
       "expo-web-browser"
     ],
     "android": {
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.rajju27.queuezero"
     }
   }
 }

@@ -22,6 +22,8 @@ export default function SignupScreen() {
   const [loading, setLoading]   = useState(false)
 
   const [focusedField, setFocusedField] = useState('')
+   const cardAnim   = useRef(new Animated.Value(0)).current
+  /*
    const lottieRef  = useRef<LottieView>(null)
     const owlSize    = useRef(new Animated.Value(180)).current
     const owlOpacity = useRef(new Animated.Value(1)).current
@@ -88,7 +90,7 @@ export default function SignupScreen() {
        })
    
        return () => { show.remove(); hide.remove() }
-     }, [])
+     }, [])*/
   const validate = () => {
     if (!FullName.trim()) {
       Alert.alert('Missing Name', 'Please enter your full name')
@@ -134,7 +136,7 @@ export default function SignupScreen() {
       Alert.alert(
         '🎉 Account Created!',
         'Welcome to QueueZero! You can now book your appointments.',
-        [{ text: 'Get Started', onPress: () => router.replace('/(tabs)') }]
+        [{ text: 'Get Started', onPress: () => router.replace('booking/select-service') }]
       )
 
     } catch (error: any) {
@@ -179,7 +181,7 @@ export default function SignupScreen() {
                   <Text style={styles.appTagline}>queuezerogit </Text>
                 </Animated.View>
         
-                {/* Hippo animation — shrinks on keyboard */}
+                {/* Hippo animation — shrinks on keyboard 
                 <Animated.View style={[
                   styles.hippoContainer,
                   {
@@ -200,7 +202,7 @@ export default function SignupScreen() {
                       lottieRef.current?.play(40, 79)
                     }}
                   />
-                </Animated.View>
+                </Animated.View>*/}
         
                 {/* Hint text — hidden when keyboard open */}
                 {!setKeyboardOpen && (

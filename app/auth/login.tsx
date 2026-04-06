@@ -16,11 +16,12 @@ export default function LoginScreen() {
   const [showPass, setShowPass] = useState(false)
   const [focusedField, setFocusedField] = useState('idle')
   const [keyboardOpen, setKeyboardOpen] = useState(false)
+  const cardAnim   = useRef(new Animated.Value(0)).current
 
-  const lottieRef  = useRef<LottieView>(null)
+  /*const lottieRef  = useRef<LottieView>(null)
   const owlSize    = useRef(new Animated.Value(180)).current
   const owlOpacity = useRef(new Animated.Value(1)).current
-  const cardAnim   = useRef(new Animated.Value(0)).current
+  
   const floatAnim  = useRef(new Animated.Value(0)).current
 
   // ── Card slide-in on mount ──────────────────────────────────────
@@ -104,7 +105,7 @@ export default function LoginScreen() {
     // Waves hello for name and email
     lottieRef.current.play(0, 39)
   }
-}, [focusedField])
+}, [focusedField])*/
   // ── Login handler ───────────────────────────────────────────────
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -157,14 +158,14 @@ export default function LoginScreen() {
         <View style={{ height: 50 }} />
 
         {/* App name */}
-        <Animated.View style={{ opacity: cardAnim, alignItems: 'center' }}>
+        
           <Text style={styles.appName}>
             Queue<Text style={styles.appAccent}>Zero</Text>
           </Text>
           <Text style={styles.appTagline}>🏥 Smart Hospital Booking</Text>
-        </Animated.View>
+       
 
-        {/* Hippo animation — shrinks on keyboard */}
+        {/* Hippo animation — shrinks on keyboard 
         <Animated.View style={[
           styles.hippoContainer,
           {
@@ -185,7 +186,7 @@ export default function LoginScreen() {
               lottieRef.current?.play(40, 79)
             }}
           />
-        </Animated.View>
+        </Animated.View> */}
 
         {/* Hint text — hidden when keyboard open */}
         {!keyboardOpen && (
@@ -194,7 +195,7 @@ export default function LoginScreen() {
           </Animated.Text>
         )}
 
-        {/* Card — slides up on mount */}
+        {/* Card — slides up on mount 
         <Animated.View style={[
           styles.card,
           {
@@ -206,7 +207,7 @@ export default function LoginScreen() {
               })
             }]
           }
-        ]}>
+        ]}>*/}
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Login to your account</Text>
 
@@ -296,7 +297,7 @@ export default function LoginScreen() {
               <Text style={styles.bottomLink}>Create account</Text>
             </TouchableOpacity>
           </View>
-        </Animated.View>
+       
 
         {/* HIPAA badge */}
         <View style={styles.hipaaRow}>
